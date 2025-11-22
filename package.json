@@ -3,13 +3,31 @@
   "version": "1.0.50",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "bun run --watch src/index.ts"
+    "dev": "bun run --watch src/index.ts",
+    "prepare": "husky",
+    "db:push": "bunx drizzle-kit push",
+    "db:generate": "bunx drizzle-kit generate",
+    "db:migrate": "bunx drizzle-kit migrate"
   },
   "dependencies": {
-    "elysia": "latest"
+    "@elysiajs/openapi": "^1.4.11",
+    "dotenv": "^17.2.3",
+    "drizzle-orm": "^0.44.7",
+    "elysia": "latest",
+    "pg": "^8.16.3",
+    "winston": "^3.18.3"
   },
   "devDependencies": {
-    "bun-types": "latest"
+    "@types/pg": "^8.15.6",
+    "bun-types": "latest",
+    "drizzle-kit": "^0.31.7",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.7",
+    "prettier": "3.6.2",
+    "tsx": "^4.20.6"
   },
-  "module": "src/index.js"
+  "module": "src/index.js",
+  "lint-staged": {
+    "**/*": "prettier --write --ignore-unknown"
+  }
 }
