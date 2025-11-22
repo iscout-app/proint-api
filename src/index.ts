@@ -2,13 +2,28 @@ import { Elysia } from "elysia";
 import { openapi } from "@elysiajs/openapi";
 import { logger } from "./logger";
 import { drizzle } from "drizzle-orm/node-postgres";
-import { usersTable } from "./db/schema";
+import {
+  athleteCareer,
+  athleteRelations,
+  athletes,
+  teamRelations,
+  teams,
+  userRelations,
+  users,
+} from "./db/schema";
 
 const db = drizzle(Bun.env.DATABASE_URL!, {
   schema: {
-    usersTable,
+    users,
+    teams,
+    athletes,
+    athleteCareer,
+    userRelations,
+    teamRelations,
+    athleteRelations,
   },
 });
+
 const port = Bun.env.PORT ?? 3000;
 const server = new Elysia({ prefix: "/v1" })
   .use(openapi())
@@ -32,11 +47,6 @@ const server = new Elysia({ prefix: "/v1" })
     call.onError(({ error }) =>
       logger.error(`[${call.id}] [${call.context.request.url}] error`, error),
     );
-  })
-  .get("/users", async function listUsers() {
-    const users = await db.query.usersTable.findMany();
-
-    return users;
   });
 
 try {
@@ -47,4 +57,4 @@ try {
   console.error(err);
 }
 
-export { server };
+export { server, db };
