@@ -2,27 +2,10 @@ import { Elysia } from "elysia";
 import { openapi } from "@elysiajs/openapi";
 import { logger } from "./logger";
 import { drizzle } from "drizzle-orm/node-postgres";
-import {
-  athleteCareer,
-  athleteRelations,
-  athletes,
-  teamRelations,
-  teams,
-  userRelations,
-  users,
-} from "./db/schema";
+import * as schema from "./db/schema";
+import { auth } from "./modules/auth";
 
-const db = drizzle(Bun.env.DATABASE_URL!, {
-  schema: {
-    users,
-    teams,
-    athletes,
-    athleteCareer,
-    userRelations,
-    teamRelations,
-    athleteRelations,
-  },
-});
+const db = drizzle(Bun.env.DATABASE_URL!, { schema });
 
 const port = Bun.env.PORT ?? 3000;
 const server = new Elysia({ prefix: "/v1" })
@@ -47,7 +30,8 @@ const server = new Elysia({ prefix: "/v1" })
     call.onError(({ error }) =>
       logger.error(`[${call.id}] [${call.context.request.url}] error`, error),
     );
-  });
+  })
+  .use(auth);
 
 try {
   server.listen(port);
