@@ -3,7 +3,7 @@ import { openapi } from "@elysiajs/openapi";
 import { logger } from "./logger";
 import { drizzle } from "drizzle-orm/node-postgres";
 import * as schema from "./db/schema";
-import { auth, AuthContext } from "./modules/auth";
+import { auth } from "./modules/auth";
 
 const db = drizzle(Bun.env.DATABASE_URL!, { schema });
 
@@ -27,9 +27,9 @@ const server = new Elysia({ prefix: "/v1" })
       );
     });
 
-    call.onError(({ error }) =>
-      logger.error(`[${call.id}] [${call.context.request.url}] error`, error),
-    );
+    call.onError(() => {
+      logger.error(`[${call.id}] [${call.context.request.url}] error`);
+    });
   })
   .use(auth)
   .get("/", ({ user }) => user);

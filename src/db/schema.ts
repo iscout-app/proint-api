@@ -8,6 +8,8 @@ import {
   primaryKey,
   integer,
   date,
+  boolean,
+  jsonb,
 } from "drizzle-orm/pg-core";
 
 const users = pgTable("users", {
@@ -99,6 +101,44 @@ const matchAthletes = pgTable(
   ],
 );
 
+const trainings = pgTable("trainings", {
+  id: uuid().defaultRandom().primaryKey(),
+  teamId: uuid()
+    .notNull()
+    .references(() => teams.id),
+  date: date().notNull(),
+});
+
+const trainingClasses = pgTable("training_class", {
+  id: uuid().defaultRandom().primaryKey(),
+  trainingId: uuid()
+    .notNull()
+    .references(() => trainings.id),
+  title: varchar({ length: 1024 }).notNull(),
+  description: varchar({ length: 4096 }),
+  notes: varchar({ length: 4096 }),
+  concluded: boolean().default(false),
+  concludedAt: timestamp(),
+});
+
+const athleteTrainingClassStats = pgTable(
+  "athlete_training_class_stats",
+  {
+    athleteId: uuid()
+      .notNull()
+      .references(() => athletes.id),
+    trainingClassId: uuid()
+      .notNull()
+      .references(() => trainingClasses.id),
+    present: boolean().default(true),
+    notes: varchar({ length: 4096 }),
+    stats: jsonb(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.athleteId, table.trainingClassId] }),
+  ],
+);
+
 const teamRelations = relations(teams, ({ one, many }) => ({
   owner: one(users, {
     fields: [teams.createdBy],
@@ -106,6 +146,7 @@ const teamRelations = relations(teams, ({ one, many }) => ({
     relationName: "owner",
   }),
   athletes: many(athleteCareer),
+  trainings: many(trainings),
   playAthletes: many(matchAthletes),
   homeMatches: many(matches, { relationName: "homeTeam" }),
   awayMatches: many(matches, { relationName: "awayTeam" }),
@@ -158,6 +199,39 @@ const matchAthleteRelations = relations(matchAthletes, ({ one }) => ({
     references: [teams.id],
   }),
 }));
+
+const trainingRelations = relations(trainings, ({ one, many }) => ({
+  team: one(teams, {
+    fields: [trainings.teamId],
+    references: [teams.id],
+  }),
+  classes: many(trainingClasses),
+}));
+
+const trainingClassesRelations = relations(
+  trainingClasses,
+  ({ one, many }) => ({
+    training: one(trainings, {
+      fields: [trainingClasses.trainingId],
+      references: [trainings.id],
+    }),
+    athleteStats: many(athleteTrainingClassStats),
+  }),
+);
+
+const athleteTrainingClassStatsRelations = relations(
+  athleteTrainingClassStats,
+  ({ one }) => ({
+    athlete: one(athletes, {
+      fields: [athleteTrainingClassStats.athleteId],
+      references: [athletes.id],
+    }),
+    trainingClasses: one(trainingClasses, {
+      fields: [athleteTrainingClassStats.trainingClassId],
+      references: [trainingClasses.id],
+    }),
+  }),
+);
 
 export {
   users,

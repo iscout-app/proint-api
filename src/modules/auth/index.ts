@@ -1,18 +1,7 @@
-import { type Context, Elysia, status } from "elysia";
+import { Elysia, status } from "elysia";
 import { loginSchema, registerSchema } from "./model";
 import { Auth, User } from "./service";
-
 import jwt from "@elysiajs/jwt";
-
-type AuthContext = Context & {
-  set: Context["set"] & {
-    user: {
-      id: string;
-      email: string;
-      name: string;
-    };
-  };
-};
 
 const auth = new Elysia({ prefix: "/auth" })
   .use(
@@ -51,7 +40,7 @@ const auth = new Elysia({ prefix: "/auth" })
     },
   )
   .post(
-    "/register",
+    "/sign-up",
     async function register({ body, jwt, cookie: { auth } }) {
       const result = await Auth.register(body);
       const token = await jwt.sign({ id: result.id });
