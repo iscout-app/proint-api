@@ -1,7 +1,18 @@
-import { Elysia, status } from "elysia";
+import { type Context, Elysia, status } from "elysia";
 import { loginSchema, registerSchema } from "./model";
-import { Auth } from "./service";
+import { Auth, User } from "./service";
+
 import jwt from "@elysiajs/jwt";
+
+type AuthContext = Context & {
+  set: Context["set"] & {
+    user: {
+      id: string;
+      email: string;
+      name: string;
+    };
+  };
+};
 
 const auth = new Elysia({ prefix: "/auth" })
   .use(
@@ -13,7 +24,7 @@ const auth = new Elysia({ prefix: "/auth" })
   )
   .post(
     "/sign-in",
-    async function signIn({ body, jwt }) {
+    async function signIn({ body, jwt, cookie: { auth } }) {
       const result = await Auth.signIn(body);
 
       if (!result) {
@@ -24,9 +35,15 @@ const auth = new Elysia({ prefix: "/auth" })
         id: result.id,
       });
 
+      auth.set({
+        value: token,
+        maxAge: 86400,
+        httpOnly: true,
+      });
+
       return {
+        success: true,
         data: result,
-        token,
       };
     },
     {
@@ -35,22 +52,49 @@ const auth = new Elysia({ prefix: "/auth" })
   )
   .post(
     "/register",
-    async function register({ body, jwt }) {
-      try {
-        const result = await Auth.register(body);
-        const token = await jwt.sign({ id: result.id });
+    async function register({ body, jwt, cookie: { auth } }) {
+      const result = await Auth.register(body);
+      const token = await jwt.sign({ id: result.id });
 
-        return {
-          data: result,
-          token,
-        };
-      } catch {
-        throw status(409, "Endereço de e-mail já utilizado.");
-      }
+      auth.set({
+        value: token,
+        maxAge: 86400,
+        httpOnly: true,
+      });
+
+      return {
+        success: true,
+        data: result,
+      };
     },
     {
       body: registerSchema,
     },
+  )
+  .derive(
+    {
+      as: "scoped",
+    },
+    async function authMiddleware({ cookie: { auth }, jwt }) {
+      if (!auth || !auth.value) {
+        throw status(401, "Unauthorized");
+      }
+
+      const payload = await jwt.verify(auth.value as string);
+
+      if (!payload) {
+        throw status(403, "Forbidden");
+      }
+
+      const user = await User.findUserById(payload.id as string);
+
+      if (!user) {
+        throw status(403, "Forbidden");
+      }
+
+      return { user };
+    },
   );
 
 export { auth };
+export type { AuthContext };

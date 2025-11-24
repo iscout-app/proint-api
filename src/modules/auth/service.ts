@@ -61,11 +61,24 @@ abstract class Auth {
       .returning({
         id: users.id,
         email: users.email,
-        name: users.email,
+        name: users.name,
       });
 
     return result;
   }
 }
 
-export { Auth };
+abstract class User {
+  static async findUserById(id: (typeof users.$inferSelect)["id"]) {
+    const record = await db.query.users.findFirst({
+      where: (row) => eq(row.id, id),
+      columns: {
+        password: false,
+      },
+    });
+
+    return record;
+  }
+}
+
+export { Auth, User };
