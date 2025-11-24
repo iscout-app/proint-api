@@ -86,4 +86,3 @@ const auth = new Elysia({ prefix: "/auth" })
   );
 
 export { auth };
-export type { AuthContext };

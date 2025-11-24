@@ -4,6 +4,7 @@ import { logger } from "./logger";
 import { drizzle } from "drizzle-orm/node-postgres";
 import * as schema from "./db/schema";
 import { auth } from "./modules/auth";
+import { team } from "./modules/team";
 
 const db = drizzle(Bun.env.DATABASE_URL!, { schema });
 
@@ -31,8 +32,11 @@ const server = new Elysia({ prefix: "/v1" })
       logger.error(`[${call.id}] [${call.context.request.url}] error`);
     });
   })
-  .use(auth)
-  .get("/", ({ user }) => user);
+  .use(auth);
+
+type ElysiaProtectedServer = typeof server;
+
+server.use(team);
 
 try {
   server.listen(port);
@@ -43,3 +47,4 @@ try {
 }
 
 export { server, db };
+export type { ElysiaProtectedServer };
