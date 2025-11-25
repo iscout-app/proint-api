@@ -12,10 +12,14 @@ const team = (app: ElysiaProtectedServer) =>
       .get("/:id", ({ params: { id } }) => Team.fetch(id), {
         params: teamIdSchema,
       })
-      .patch("/:id", ({ params: { id }, body }) => Team.patch(id, body), {
-        params: teamIdSchema,
-        body: updateTeamSchema,
-      })
+      .patch(
+        "/:id",
+        ({ user, params: { id }, body }) => Team.patch(id, user.id, body),
+        {
+          params: teamIdSchema,
+          body: updateTeamSchema,
+        },
+      )
       .get("/all", () => Team.index()),
   );
 

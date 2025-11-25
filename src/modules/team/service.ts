@@ -2,7 +2,7 @@ import z from "zod";
 import { createTeamSchema, updateTeamSchema } from "./model";
 import { db } from "../..";
 import { teams } from "../../db/schema";
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 
 abstract class Team {
   static async create(
@@ -50,8 +50,20 @@ abstract class Team {
 
   static async patch(
     teamId: string,
+    ownerId: string,
     payload: z.infer<typeof updateTeamSchema>,
   ) {
+    const permissionRecord = await db.query.teams.findFirst({
+      columns: {
+        id: true,
+      },
+      where: (row) => and(eq(row.id, teamId), eq(row.createdBy, ownerId)),
+    });
+
+    if (!permissionRecord) {
+      throw new Error("Sem permissão.");
+    }
+
     const [result] = await db
       .update(teams)
       .set(payload)
