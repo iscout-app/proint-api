@@ -5,6 +5,7 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import * as schema from "./db/schema";
 import { auth } from "./modules/auth";
 import { team } from "./modules/team";
+import { athletes } from "./modules/athletes";
 
 const db = drizzle(Bun.env.DATABASE_URL!, { schema });
 
@@ -36,7 +37,7 @@ const server = new Elysia({ prefix: "/v1" })
 
 type ElysiaProtectedServer = typeof server;
 
-server.use(team);
+server.use(team).use(athletes);
 
 try {
   server.listen(port);
