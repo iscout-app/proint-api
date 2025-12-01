@@ -17,7 +17,7 @@ const auth = new Elysia({ prefix: "/auth" })
       const result = await Auth.signIn(body);
 
       if (!result) {
-        throw status(400, "Verifique os campos informados e tente novamente.");
+        throw status(401, "Verifique os campos informados e tente novamente.");
       }
 
       const token = await jwt.sign({

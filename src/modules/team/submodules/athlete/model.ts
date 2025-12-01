@@ -2,7 +2,19 @@ import z from "zod";
 
 const athleteQueryFilterSchema = z.object({
   current: z
-    .boolean("O filtro de atletas atuais deve ser um booleano.")
+    .string()
+    .transform((input, ctx) => {
+      if (input !== "true" && input !== "false") {
+        ctx.addIssue({
+          code: "invalid_format",
+          format: "O filtro de atletas atuais deve ser um booleano.",
+        });
+
+        return false;
+      }
+
+      return input === "true";
+    })
     .default(false),
   name: z.string().optional(),
   position: z.string().optional(),

@@ -3,6 +3,7 @@ import { loginSchema, registerSchema } from "./model";
 import { db } from "../..";
 import { eq } from "drizzle-orm";
 import { users } from "../../db/schema";
+import { status } from "elysia";
 
 abstract class Auth {
   static async signIn({ email, password }: z.infer<typeof loginSchema>) {
@@ -45,8 +46,7 @@ abstract class Auth {
     });
 
     if (record) {
-      // TODO: criar error-helper com status 409 (conflict)
-      throw new Error("E-mail já cadastrado.");
+      throw status(409, "E-mail já cadastrado.");
     }
 
     const hash = await Bun.password.hash(password);

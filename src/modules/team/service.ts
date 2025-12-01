@@ -30,7 +30,7 @@ abstract class Team {
   }
 
   static async fetch(teamId: string) {
-    const [record] = await db.query.teams.findMany({
+    const record = await db.query.teams.findFirst({
       where: (row) => eq(row.id, teamId),
       with: {
         owner: {
@@ -39,11 +39,49 @@ abstract class Team {
           },
         },
         athletes: true,
-        awayMatches: true,
-        homeMatches: true,
+        homeMatches: {
+          with: {
+            awayTeam: {
+              columns: {
+                id: true,
+                fullName: true,
+                shortName: true,
+                iconUrl: true,
+                mainColorHex: true,
+                secondaryColorHex: true,
+              },
+            },
+          },
+        },
+        awayMatches: {
+          with: {
+            homeTeam: {
+              columns: {
+                id: true,
+                fullName: true,
+                shortName: true,
+                iconUrl: true,
+                mainColorHex: true,
+                secondaryColorHex: true,
+              },
+            },
+          },
+        },
         trainings: true,
       },
     });
+
+    // Sort matches by timestamp in JavaScript
+    if (record) {
+      record.homeMatches = record.homeMatches.sort(
+        (a, b) =>
+          new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+      );
+      record.awayMatches = record.awayMatches.sort(
+        (a, b) =>
+          new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+      );
+    }
 
     return record;
   }
