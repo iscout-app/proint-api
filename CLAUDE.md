@@ -12,10 +12,15 @@ This is a REST API built with Elysia (Bun framework) for managing sports teams, 
 # Start development server with hot reload
 bun run dev
 
+# Run tests
+bun test
+bun test:watch  # Run tests in watch mode
+
 # Database operations
 bun run db:push      # Push schema changes to database
 bun run db:generate  # Generate migration files
 bun run db:migrate   # Run migrations
+bun run db:seed      # Seed database with test data
 
 # Code formatting (runs automatically on pre-commit via Husky)
 prettier --write --ignore-unknown **/*
@@ -29,7 +34,7 @@ prettier --write --ignore-unknown **/*
 - **Framework**: Elysia (TypeScript-first web framework)
 - **Database**: PostgreSQL with Drizzle ORM
 - **Authentication**: JWT tokens via @elysiajs/jwt
-- **Validation**: Zod schemas
+- **Validation**: Zod schemas (v4)
 - **Logging**: Winston
 - **Pre-commit**: Husky + lint-staged (auto-formats with Prettier)
 
@@ -101,7 +106,7 @@ Located in `src/db/schema.ts`. Key patterns:
 - **matchAthletes**: Performance data per match, composite PK `(athleteId, matchId, teamId)`
 - **trainings** & **trainingClasses**: Training sessions with athlete stats
 
-**Critical**: `athleteCareer` contains denormalized statistics (matches, goals, assists, yellowCards, redCards) that must be updated when matches are created or modified.
+**Critical**: `athleteCareer` contains denormalized statistics (matches, goals, assists, yellowCards, redCards) that must be updated when matches are created or modified. The Match service handles this atomically using transactions.
 
 ### Entry Point & TypeScript
 
@@ -111,7 +116,7 @@ Located in `src/db/schema.ts`. Key patterns:
 2. Elysia server with `/v1` prefix
 3. OpenAPI documentation via `@elysiajs/openapi`
 4. Request tracing with Winston logger (logs request, handle, and error events)
-5. Module registration: `.use(auth)` then `.use(team)`
+5. Module registration: `.use(auth)` then `.use(team).use(athletes).use(match)`
 
 **Exports**:
 
@@ -184,6 +189,16 @@ if (filter.from) filters.push(gte(athleteCareer.startedAt, filter.from));
 .where(and(eq(athleteCareer.teamId, teamId), ...filters))
 ```
 
+**Using transactions**: For operations requiring atomicity (like updating denormalized stats):
+
+```typescript
+await db.transaction(async (tx) => {
+  // Multiple operations that must succeed or fail together
+  await tx.insert(matches).values(...);
+  await tx.update(athleteCareer).set(...);
+});
+```
+
 ### Response & Error Patterns
 
 - **Success**: Return plain data object or `{ success: true, data: ... }`
@@ -194,8 +209,20 @@ if (filter.from) filters.push(gte(athleteCareer.startedAt, filter.from));
   throw status(409, "Endereço de e-mail já utilizado.");
   throw status(401, "Unauthorized");
   throw status(403, "Forbidden");
+  throw status(404, "Recurso não encontrado.");
   ```
 - **TODO pattern**: Code includes TODO comments for refactoring (e.g., creating error helpers)
+
+### Denormalized Statistics Pattern
+
+When creating or updating matches, statistics in `athleteCareer` must be kept in sync:
+
+1. **Match creation**: Increment stats using `sql` template for atomic updates
+2. **Match updates**: Decrement old stats, delete old performances, insert new ones, increment new stats
+3. **Use transactions**: All stat updates must happen atomically to prevent inconsistency
+4. **Validation**: Check that athletes have active careers (`finishedAt IS NULL`) before allowing match creation
+
+See `src/modules/matches/service.ts` for reference implementation.
 
 ### Adding New Modules
 

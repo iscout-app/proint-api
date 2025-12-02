@@ -107,6 +107,8 @@ const trainings = pgTable("trainings", {
     .notNull()
     .references(() => teams.id),
   date: date().notNull(),
+  concluded: boolean().default(false),
+  concludedAt: timestamp(),
 });
 
 const trainingClasses = pgTable("training_class", {

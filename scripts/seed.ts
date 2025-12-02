@@ -9,6 +9,9 @@ async function seed() {
 
   // 1. Clear existing data (reverse order of dependencies)
   console.log("🗑️  Clearing existing data...");
+  await db.delete(schema.athleteTrainingClassStats);
+  await db.delete(schema.trainingClasses);
+  await db.delete(schema.trainings);
   await db.delete(schema.matchAthletes);
   await db.delete(schema.matches);
   await db.delete(schema.athleteCareer);
@@ -351,6 +354,114 @@ async function seed() {
   }
 
   console.log("✅ Updated athlete career stats");
+
+  // 9. Create trainings (12 trainings, distributed among teams)
+  console.log("🏋️  Creating trainings...");
+  const trainingsData = [];
+
+  for (const team of teams) {
+    // Create 1-2 trainings per team
+    const numTrainings = 1 + Math.floor(Math.random() * 2);
+    for (let i = 0; i < numTrainings; i++) {
+      const daysAgo = Math.floor(Math.random() * 30); // Last 30 days
+      const trainingDate = new Date(now);
+      trainingDate.setDate(trainingDate.getDate() - daysAgo);
+
+      trainingsData.push({
+        teamId: team.id,
+        date: trainingDate.toISOString().split("T")[0],
+        concluded: Math.random() > 0.3, // 70% concluded
+      });
+    }
+  }
+
+  const trainings = await db
+    .insert(schema.trainings)
+    .values(trainingsData)
+    .returning();
+
+  console.log(`✅ Created ${trainings.length} trainings`);
+
+  // 10. Create training classes (2-3 classes per training)
+  console.log("📚 Creating training classes...");
+  const trainingClassesData = [];
+  const classTitles = [
+    "Treino Tático",
+    "Treino Físico",
+    "Treino Técnico",
+    "Treino de Finalizações",
+    "Treino de Passes",
+    "Treino de Resistência",
+    "Treino de Velocidade",
+    "Treino de Bola Parada",
+  ];
+
+  for (const training of trainings) {
+    const numClasses = 2 + Math.floor(Math.random() * 2); // 2-3 classes
+    for (let i = 0; i < numClasses; i++) {
+      trainingClassesData.push({
+        trainingId: training.id,
+        title: classTitles[Math.floor(Math.random() * classTitles.length)],
+        description:
+          Math.random() > 0.5
+            ? "Descrição do treino com foco em melhorar aspectos específicos."
+            : undefined,
+        notes:
+          Math.random() > 0.7
+            ? "Observações importantes sobre o treino."
+            : undefined,
+        concluded: training.concluded,
+      });
+    }
+  }
+
+  const trainingClasses = await db
+    .insert(schema.trainingClasses)
+    .values(trainingClassesData)
+    .returning();
+
+  console.log(`✅ Created ${trainingClasses.length} training classes`);
+
+  // 11. Add athletes to training classes
+  console.log("👥 Adding athletes to training classes...");
+  const athleteStatsData = [];
+
+  for (const trainingClass of trainingClasses) {
+    // Get the training to find the team
+    const training = trainings.find((t) => t.id === trainingClass.trainingId);
+    if (!training) continue;
+
+    // Get athletes from this team
+    const teamAthletes = careerData.filter((c) => c.teamId === training.teamId);
+
+    // Add 2-3 athletes to this class
+    const numAthletes = 2 + Math.floor(Math.random() * 2);
+    for (let i = 0; i < Math.min(numAthletes, teamAthletes.length); i++) {
+      const career = teamAthletes[i];
+      athleteStatsData.push({
+        trainingClassId: trainingClass.id,
+        athleteId: career.athleteId,
+        present: Math.random() > 0.1, // 90% present
+        notes:
+          Math.random() > 0.7
+            ? ["Bom desempenho", "Precisa melhorar", "Excelente"][
+                Math.floor(Math.random() * 3)
+              ]
+            : undefined,
+        stats: {
+          velocidade: Math.round((Math.random() * 5 + 5) * 10) / 10, // 5.0-10.0
+          resistencia: Math.round((Math.random() * 5 + 5) * 10) / 10,
+          tecnica: Math.round((Math.random() * 5 + 5) * 10) / 10,
+        },
+      });
+    }
+  }
+
+  await db.insert(schema.athleteTrainingClassStats).values(athleteStatsData);
+  console.log(
+    `✅ Created ${athleteStatsData.length} athlete training class stats`,
+  );
+
   console.log("\n✨ Seed completed successfully!");
   console.log("\n📝 Test credentials:");
   console.log("   Email: joao@example.com");
