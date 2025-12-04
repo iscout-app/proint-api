@@ -60,6 +60,14 @@ const auth = new Elysia({ prefix: "/auth" })
       body: registerSchema,
     },
   )
+  .post("/logout", async function logout({ cookie: { auth } }) {
+    auth.remove();
+
+    return {
+      success: true,
+      message: "Logout realizado com sucesso",
+    };
+  })
   .derive(
     {
       as: "scoped",

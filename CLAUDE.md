@@ -59,9 +59,52 @@ Located in `src/db/schema.ts`. Key entities:
 - **athletes**: Player information
 - **athleteCareer**: Junction table tracking athlete-team relationships with denormalized stats (matches, goals, assists, cards)
 - **matches**: Game records with home/away teams and scores
-- **matchAthletes**: Athlete performance in specific matches
+- **matchAthletes**: Athlete performance in specific matches with detailed statistics
+- **trainings**: Training sessions
+- **trainingClasses**: Individual training activities
+- **athleteTrainingClassStats**: Athlete performance in training sessions
 
 **Important**: `athleteCareer` contains denormalized statistics that must be updated when matches are created or modified.
+
+#### Match Statistics (matchAthletes)
+
+The `matchAthletes` table stores comprehensive per-match statistics for each athlete:
+
+**Basic Info**:
+
+- `athleteId`, `matchId`, `teamId`: Primary key composite
+- `position`: Player position in the match
+- `minutesPlayed`: Minutes the player was on the field (0-120)
+
+**Offensive Stats**:
+
+- `goals`: Goals scored
+- `assists`: Assists provided
+- `shots`: Total shots attempted
+- `shotsOnTarget`: Shots on target
+
+**Passing Stats**:
+
+- `accuratePasses`: Successful passes
+- `inaccuratePasses`: Failed passes
+- Pass accuracy is calculated as: `(accuratePasses / (accuratePasses + inaccuratePasses)) * 100`
+
+**Defensive Stats**:
+
+- `tackles`: Successful tackles
+- `interceptions`: Interceptions made
+- `foulsCommitted`: Fouls committed by the player
+- `foulsSuffered`: Fouls suffered by the player
+
+**Discipline**:
+
+- `yellowCards`: Yellow cards received (0-2)
+- `redCards`: Red cards received (0-1)
+
+**Performance Rating**:
+
+- `performanceRating`: Overall rating stored as integer 0-100 (displayed as 0.0-10.0 in UI)
+- `observations`: Text notes from coaches/scouts (max 4096 chars)
 
 ### Entry Point
 

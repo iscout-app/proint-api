@@ -36,6 +36,7 @@ abstract class Auth {
     name,
     email,
     password,
+    role = "tecnico",
   }: z.infer<typeof registerSchema>) {
     const record = await db.query.users.findFirst({
       where: (row) => eq(row.email, email),
@@ -57,11 +58,13 @@ abstract class Auth {
         email,
         name,
         password: hash,
+        role,
       })
       .returning({
         id: users.id,
         email: users.email,
         name: users.name,
+        role: users.role,
       });
 
     return result;

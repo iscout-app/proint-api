@@ -17,6 +17,7 @@ const users = pgTable("users", {
   name: varchar({ length: 255 }).notNull(),
   email: varchar({ length: 255 }).unique().notNull(),
   password: varchar({ length: 255 }).notNull(),
+  role: varchar({ length: 20 }).notNull().default("tecnico"), // admin, tecnico, olheiro, responsavel
   createdAt: timestamp().defaultNow(),
   updatedAt: timestamp()
     .defaultNow()
@@ -91,10 +92,26 @@ const matchAthletes = pgTable(
       .notNull()
       .references(() => teams.id),
     position: varchar({ length: 255 }).notNull(),
+    minutesPlayed: integer().notNull().default(0),
+    // Offensive stats
     goals: integer().notNull().default(0),
     assists: integer().notNull().default(0),
+    shots: integer().notNull().default(0),
+    shotsOnTarget: integer().notNull().default(0),
+    // Passing stats
+    accuratePasses: integer().notNull().default(0),
+    inaccuratePasses: integer().notNull().default(0),
+    // Defensive stats
+    tackles: integer().notNull().default(0),
+    interceptions: integer().notNull().default(0),
+    foulsCommitted: integer().notNull().default(0),
+    foulsSuffered: integer().notNull().default(0),
+    // Cards
     yellowCards: integer().notNull().default(0),
     redCards: integer().notNull().default(0),
+    // Performance rating and observations
+    performanceRating: integer(), // 0-100 (stored as integer, displayed as 0.0-10.0)
+    observations: varchar({ length: 4096 }),
   },
   (table) => [
     primaryKey({ columns: [table.athleteId, table.matchId, table.teamId] }),
