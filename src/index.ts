@@ -11,7 +11,7 @@ import { match } from "./modules/matches";
 const db = drizzle(Bun.env.DATABASE_URL!, { schema });
 
 const port = Bun.env.PORT ?? 3000;
-const server = new Elysia({ prefix: "/v1" })
+const server = new Elysia({ prefix: "/api/v1" })
   .use(openapi())
   .trace(function traceRequest(call) {
     call.onRequest((result) => {
