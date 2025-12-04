@@ -7,11 +7,13 @@ import { auth } from "./modules/auth";
 import { team } from "./modules/team";
 import { athletes } from "./modules/athletes";
 import { match } from "./modules/matches";
+import { cors } from "@elysiajs/cors";
 
 const db = drizzle(Bun.env.DATABASE_URL!, { schema });
 
 const port = Bun.env.PORT ?? 3000;
 const server = new Elysia({ prefix: "/api/v1" })
+  .use(cors())
   .use(openapi())
   .trace(function traceRequest(call) {
     call.onRequest((result) => {
