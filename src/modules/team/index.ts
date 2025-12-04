@@ -6,6 +6,7 @@ import {
   createAthleteSchema,
   transferAthleteSchema,
   athleteIdSchema,
+  athleteTrainingsQuerySchema,
 } from "./submodules/athlete/model";
 import { Athlete } from "./submodules/athlete/service";
 import {
@@ -69,6 +70,36 @@ const team = (app: ElysiaProtectedServer) =>
               .uuid("O identificador do atleta deve ser um UUID."),
           }),
           body: transferAthleteSchema,
+        },
+      )
+      .get(
+        "/:id/athletes/:athleteId/stats",
+        ({ params: { id, athleteId } }) => Athlete.fetchStats(id, athleteId),
+        {
+          params: z.object({
+            id: z
+              .string({ message: "O identificador do time é obrigatório." })
+              .uuid("O identificador do time deve ser um UUID."),
+            athleteId: z
+              .string({ message: "O identificador do atleta é obrigatório." })
+              .uuid("O identificador do atleta deve ser um UUID."),
+          }),
+        },
+      )
+      .get(
+        "/:id/athletes/:athleteId/trainings",
+        ({ params: { id, athleteId }, query }) =>
+          Athlete.fetchTrainings(id, athleteId, query),
+        {
+          params: z.object({
+            id: z
+              .string({ message: "O identificador do time é obrigatório." })
+              .uuid("O identificador do time deve ser um UUID."),
+            athleteId: z
+              .string({ message: "O identificador do atleta é obrigatório." })
+              .uuid("O identificador do atleta deve ser um UUID."),
+          }),
+          query: athleteTrainingsQuerySchema,
         },
       )
 

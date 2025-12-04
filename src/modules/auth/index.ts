@@ -24,10 +24,14 @@ const auth = new Elysia({ prefix: "/auth" })
         id: result.id,
       });
 
+      // Clear any existing cookie first, then set new one
+      auth.remove();
       auth.set({
         value: token,
         maxAge: 86400,
         httpOnly: true,
+        sameSite: "lax",
+        path: "/",
       });
 
       return {
@@ -45,10 +49,14 @@ const auth = new Elysia({ prefix: "/auth" })
       const result = await Auth.register(body);
       const token = await jwt.sign({ id: result.id });
 
+      // Clear any existing cookie first, then set new one
+      auth.remove();
       auth.set({
         value: token,
         maxAge: 86400,
         httpOnly: true,
+        sameSite: "lax",
+        path: "/",
       });
 
       return {
