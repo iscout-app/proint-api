@@ -1,0 +1,37 @@
+services:
+  iscout-db:
+    image: postgres:alpine
+    env_file: .env.database
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    volumes:
+      - type: tmpfs
+        target: /dev/shm
+        tmpfs:
+          size: 134217728 # 128*2^20 bytes = 128Mb
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  iscout-migrate:
+    build: .
+    env_file: .env.app
+    command: "bun db:migrate"
+    depends_on:
+      iscout-db:
+        condition: service_healthy
+    restart: "no"
+
+  iscout-api:
+    build: .
+    command: "./server"
+    env_file: .env.app
+    depends_on:
+      iscout-db:
+        condition: service_healthy
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
