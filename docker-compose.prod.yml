@@ -30,8 +30,7 @@ services:
     command: "./server"
     env_file: .env.app
     depends_on:
-      iscout-db:
-        condition: service_healthy
+      - iscout-migrate
     restart: unless-stopped
     ports:
       - "3000:3000"
