@@ -35,11 +35,11 @@ abstract class Training {
     const filters: SQLWrapper[] = [eq(trainings.teamId, teamId)];
 
     if (filter.from) {
-      filters.push(gte(trainings.date, new Date(filter.from)));
+      filters.push(gte(trainings.date, filter.from));
     }
 
     if (filter.to) {
-      filters.push(lte(trainings.date, new Date(filter.to)));
+      filters.push(lte(trainings.date, filter.to));
     }
 
     if (filter.concluded !== undefined) {
@@ -84,7 +84,7 @@ abstract class Training {
       .insert(trainings)
       .values({
         teamId,
-        date: new Date(payload.date),
+        date: payload.date,
       })
       .returning();
 
