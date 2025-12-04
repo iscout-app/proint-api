@@ -49,6 +49,23 @@ abstract class Training {
     return await db.query.trainings.findMany({
       where: and(...filters),
       orderBy: desc(trainings.date),
+      with: {
+        classes: {
+          with: {
+            athleteStats: {
+              with: {
+                athlete: {
+                  columns: {
+                    id: true,
+                    name: true,
+                    birthdate: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
     });
   }
 
