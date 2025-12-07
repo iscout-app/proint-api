@@ -96,11 +96,7 @@ const createAthleteStatsSchema = z.object({
     .string()
     .max(4096, "As notas devem possuir no máximo 4096 caracteres.")
     .optional(),
-  stats: z
-    .record(z.any(), {
-      message: "As estatísticas devem ser um objeto JSON válido.",
-    })
-    .optional(),
+  stats: z.any().optional(),
 });
 
 const updateAthleteStatsSchema = z.object({
@@ -111,11 +107,7 @@ const updateAthleteStatsSchema = z.object({
     .string()
     .max(4096, "As notas devem possuir no máximo 4096 caracteres.")
     .optional(),
-  stats: z
-    .record(z.any(), {
-      message: "As estatísticas devem ser um objeto JSON válido.",
-    })
-    .optional(),
+  stats: z.any().optional(),
 });
 
 const athleteIdParamSchema = z.object({
