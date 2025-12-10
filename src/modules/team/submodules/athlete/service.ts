@@ -8,6 +8,7 @@ import {
   SQLWrapper,
   desc,
   inArray,
+  sql,
 } from "drizzle-orm";
 import { db } from "../../../..";
 import {
@@ -15,7 +16,14 @@ import {
   createAthleteSchema,
   transferAthleteSchema,
 } from "./model";
-import { athleteCareer, athletes, teams } from "../../../../db/schema";
+import {
+  athleteCareer,
+  athletes,
+  teams,
+  trainings,
+  trainingClasses,
+  athleteTrainingClassStats,
+} from "../../../../db/schema";
 import z from "zod";
 import { status } from "elysia";
 
@@ -53,6 +61,7 @@ abstract class Athlete {
         name: athletes.name,
         birthdate: athletes.birthdate,
         position: athleteCareer.position,
+        shirtNumber: athleteCareer.shirtNumber,
         goals: athleteCareer.goals,
         assists: athleteCareer.assists,
         redCards: athleteCareer.redCards,
@@ -331,6 +340,196 @@ abstract class Athlete {
       teams: sortedTeams,
       matchPerformances: sortedPerformances,
       careerTotals,
+    };
+  }
+
+  static async fetchStats(teamId: string, athleteId: string) {
+    // 1. Fetch athlete basic info and career data for this team
+    const athlete = await db.query.athletes.findFirst({
+      where: (row) => eq(row.id, athleteId),
+      columns: {
+        id: true,
+        name: true,
+        birthdate: true,
+      },
+    });
+
+    if (!athlete) {
+      throw status(404, "Atleta não encontrado.");
+    }
+
+    // 2. Fetch career info for this specific team
+    const career = await db.query.athleteCareer.findFirst({
+      where: (row) => and(eq(row.athleteId, athleteId), eq(row.teamId, teamId)),
+      columns: {
+        shirtNumber: true,
+        position: true,
+        matches: true,
+        goals: true,
+        assists: true,
+        yellowCards: true,
+        redCards: true,
+        startedAt: true,
+        finishedAt: true,
+      },
+    });
+
+    if (!career) {
+      throw status(404, "Atleta não possui vínculo com este time.");
+    }
+
+    // 3. Calculate derived statistics
+    const goalsPerMatch =
+      career.matches > 0 ? career.goals / career.matches : 0;
+    const assistsPerMatch =
+      career.matches > 0 ? career.assists / career.matches : 0;
+
+    return {
+      athlete: {
+        id: athlete.id,
+        name: athlete.name,
+        birthdate: athlete.birthdate,
+      },
+      career: {
+        shirtNumber: career.shirtNumber,
+        position: career.position,
+        startedAt: career.startedAt,
+        finishedAt: career.finishedAt,
+        isActive: career.finishedAt === null,
+      },
+      stats: {
+        matches: career.matches,
+        goals: career.goals,
+        assists: career.assists,
+        yellowCards: career.yellowCards,
+        redCards: career.redCards,
+        goalsPerMatch: Number(goalsPerMatch.toFixed(2)),
+        assistsPerMatch: Number(assistsPerMatch.toFixed(2)),
+      },
+    };
+  }
+
+  static async fetchTrainings(
+    teamId: string,
+    athleteId: string,
+    filter: { from?: string; to?: string; limit?: number; offset?: number },
+  ) {
+    const { from, to, limit = 20, offset = 0 } = filter;
+
+    // 1. Validate athlete belongs to team
+    const career = await db.query.athleteCareer.findFirst({
+      where: (row) => and(eq(row.athleteId, athleteId), eq(row.teamId, teamId)),
+      columns: { athleteId: true },
+    });
+
+    if (!career) {
+      throw status(404, "Atleta não possui vínculo com este time.");
+    }
+
+    // 2. Build filters for trainings
+    const trainingFilters: SQLWrapper[] = [eq(trainings.teamId, teamId)];
+
+    if (from) {
+      trainingFilters.push(gte(trainings.date, from));
+    }
+
+    if (to) {
+      trainingFilters.push(lte(trainings.date, to));
+    }
+
+    // 3. Query trainings with athlete participation
+    const athleteTrainings = await db
+      .select({
+        trainingId: trainings.id,
+        trainingDate: trainings.date,
+        trainingConcluded: trainings.concluded,
+        trainingConcludedAt: trainings.concludedAt,
+        classId: trainingClasses.id,
+        classTitle: trainingClasses.title,
+        classDescription: trainingClasses.description,
+        classConcluded: trainingClasses.concluded,
+        present: athleteTrainingClassStats.present,
+        notes: athleteTrainingClassStats.notes,
+        stats: athleteTrainingClassStats.stats,
+      })
+      .from(athleteTrainingClassStats)
+      .innerJoin(
+        trainingClasses,
+        eq(athleteTrainingClassStats.trainingClassId, trainingClasses.id),
+      )
+      .innerJoin(trainings, eq(trainingClasses.trainingId, trainings.id))
+      .where(
+        and(
+          eq(athleteTrainingClassStats.athleteId, athleteId),
+          ...trainingFilters,
+        ),
+      )
+      .orderBy(desc(trainings.date))
+      .limit(limit)
+      .offset(offset);
+
+    // 4. Group by training
+    const trainingMap = new Map<
+      string,
+      {
+        id: string;
+        date: string;
+        concluded: boolean;
+        concludedAt: Date | string | null;
+        classes: Array<{
+          id: string;
+          title: string;
+          description: string | null;
+          concluded: boolean;
+          present: boolean;
+          notes: string | null;
+          stats: any;
+        }>;
+      }
+    >();
+
+    for (const row of athleteTrainings) {
+      if (!trainingMap.has(row.trainingId)) {
+        trainingMap.set(row.trainingId, {
+          id: row.trainingId,
+          date: row.trainingDate,
+          concluded: row.trainingConcluded ?? false,
+          concludedAt: row.trainingConcludedAt,
+          classes: [],
+        });
+      }
+
+      trainingMap.get(row.trainingId)!.classes.push({
+        id: row.classId,
+        title: row.classTitle,
+        description: row.classDescription,
+        concluded: row.classConcluded ?? false,
+        present: row.present ?? false,
+        notes: row.notes,
+        stats: row.stats,
+      });
+    }
+
+    const trainingsArray = Array.from(trainingMap.values());
+
+    // 5. Calculate summary statistics
+    const totalTrainings = trainingsArray.length;
+    const attendedClasses = athleteTrainings.filter((t) => t.present).length;
+    const totalClasses = athleteTrainings.length;
+    const missedClasses = totalClasses - attendedClasses;
+
+    return {
+      trainings: trainingsArray,
+      summary: {
+        totalTrainings,
+        totalClasses,
+        attendedClasses,
+        missedClasses,
+        attendanceRate:
+          totalClasses > 0
+            ? Number(((attendedClasses / totalClasses) * 100).toFixed(1))
+            : 0,
+      },
     };
   }
 }

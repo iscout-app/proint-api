@@ -174,7 +174,7 @@ const userRelations = relations(users, ({ many }) => ({
   teams: many(teams, { relationName: "owner" }),
 }));
 
-const matchRelations = relations(matches, ({ one }) => ({
+const matchRelations = relations(matches, ({ one, many }) => ({
   homeTeam: one(teams, {
     fields: [matches.homeTeamId],
     references: [teams.id],
@@ -185,6 +185,7 @@ const matchRelations = relations(matches, ({ one }) => ({
     references: [teams.id],
     relationName: "awayTeam",
   }),
+  athletes: many(matchAthletes),
 }));
 
 const matchAthleteRelations = relations(matchAthletes, ({ one }) => ({

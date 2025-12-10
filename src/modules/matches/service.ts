@@ -67,6 +67,17 @@ abstract class Match {
             secondaryColorHex: true,
           },
         },
+        athletes: {
+          with: {
+            athlete: {
+              columns: {
+                id: true,
+                name: true,
+                birthdate: true,
+              },
+            },
+          },
+        },
       },
       orderBy: desc(matches.timestamp),
     });
