@@ -41,3 +41,5 @@ Configure o `.env`, os valores padrão do `.env.example` já servem.
   - Carrega todos o schema do banco ao banco de dados em si.
 - `bun db:seed`
   - Se quiser seedar o banco criado e configurado já com dados para testes.
+- `bun dev`
+  - Inicializa a aplicação (com watchfile) na porta definida no `.env`, por padrão, 3000.
